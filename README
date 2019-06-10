@@ -1,0 +1,43 @@
+URL Text and Image Downloader
+===========================
+
+Fetches text and/or images from URL
+
+Example use
+-----------
+
+Start downloading text from an URL:
+POST /download/text/<url>
+Response if success (task started): {"fetching": "text", "URL": "<url>"}
+Examples:
+POST /download/text/http://www.python.org/
+POST /download/text/https://docs.docker.com/glossary/
+
+Start downloading images from an URL:
+POST /download/images/<url>
+Response if success (task started): {"fetching": "images", "URL": "<url>"}
+Examples:
+POST /download/images/http://www.python.org/
+POST /download/images/https://docs.docker.com/glossary/
+
+Check status of downloading from URL:
+GET /status/text/<url>
+GET /status/images/<url>
+Response if success: {"status": "<processing | ready>", "URL": "<url>"}
+Examples:
+GET /status/text/http://www.python.org/
+GET /status/images/https://docs.docker.com/glossary/
+
+Download text from an URL:
+GET /get/text/<url>
+Response if success: {"text": "<text content>"}
+Examples:
+GET /get/text/http://www.python.org/
+GET /get/text/https://docs.docker.com/glossary/
+
+Download images from an URL:
+GET /get/images/<url>
+Response if success: {"images": ["<links-for-images>"]}
+Examples:
+GET /get/images/http://www.python.org
+GET /get/images/https://docs.docker.com/glossary/

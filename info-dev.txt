@@ -1,0 +1,78 @@
+Projekt został zrealizowany na bazie mikroframeworka Flask.
+Korzysta z bazy danych PostgreSQL 11 za pośrednictwem biblioteki Flask-SQLAlchemy.
+Uruchamiany jest w Dockerze na serwerze Gunicorn.
+Do parsowania stron użyto biblioteki BeautifulSoup.
+Zapis pobranej zawartości realizowany jest na dysku maszyny, na której uruchomiony jest serwer,
+przechowywaniu tej zawartości służą katalogi 'images' i 'text'.
+
+API jest wystawione na porcie 5000, PostgreSQL korzysta ze standardowego portu 5432.
+
+Skrótowy opis API został zawarty w pliku README.
+
+Podstawowe moduły:
+app - inicjalizacja Flask,
+config - dane do konfiguracji,
+views - API,
+database - model danych (Task) oraz podstawowe funkcje tworzenia, pobrania i modyfikacji obiektów
+           bazy danych, używane przez moduły views i downloader,
+downloader - pobieranie zawartości stron, parsowanie i zapis na dysk, tworzenie/modyfikacja zadań.
+
+Aby zainicjalizować pobranie tekstu bądź obrazów z wybranego URL, należy przekazać wybrany URL
+metodą POST do endpointu /download/text/http://someurl.org/ bądź
+/download/images/http://someurl.org/, w zależności od tego, czy chcemy pobrać tekst, czy obrazy.
+
+Z uwagi na założenie, że proces pobierania może trwać dosyć długo, po wywołaniu tego tej funkcji
+najpierw następuje sprawdzenie, czy podana strona istnieje.
+Dzięki temu użytkownik otrzymuje od razu informację, że zadanie zostało rozpoczęte, lub komunikat
+o błędzie (np. gdy strona nie istnieje lub nie ma do niej dostępu).
+Po pozytytywnej weryfikacji prawidłowości podanego URL, następuje uruchomienie w oddzielnym wątku
+(użyto standardowej biblioteki threading) zadania pobrania zawartości strony, wyciągnięcia
+odpowiedniej zawartości, nadanie odpowiedniej nazwy plikom i/lub katalogom oraz zapis
+zawartości na dysk.
+Tworzony jest w bazie danych obiekt 'Task', zawierający nazwę URL, rodzaj pobranych danych
+('text' lub 'images' oraz status 'processing'). Dla uproszczenia ograniczono się tylko do tych
+dwóch statusów (można by jeszcze dodać status 'pending' w przypadku stworzenia systemu kolejkowego
+zadań oraz 'error' w przypadku błędów podczas pobierania/zapisu danych).
+Jeżeli chodzi o parsowanie zawartości, zastosowano bardzo podstawowe techniki - tekst jest
+jedynie oczyszczany z tagów html. Gdyby chcieć rozwijać projekt, można by dodać np. formatowanie
+tekstu, usuwanie większych spacji itp.
+Obrazy są pobierane bez problemu z większości stron, natomiast mogą zdarzyć się strony z których,
+pobranie obrazów nie bedzie możliwe. Dogłębna implementacja parsowania zawartości wymagałaby
+m.in. przetestowania większej ilości stron "na żywo".
+
+Po pobraniu danych, następuje zapis na dysk.
+W przypadku tekstu dla danej strony tworzony jest plik z nazwą wg schematu
+'http-www-strona-org.txt' i zapisywany w katalogu 'text'.
+W przypadku obrazów, w katalogu 'images' tworzony jest katalog z nazwą wg schematu
+'http-www-strona-org', w którym zapisywane są pliki pobranych obrazów.
+Dla uproszczenia nie wprowadzano sprawdzania czy dany katalog/plik istnieje i w przypadku
+ponownego pobrania tej samej strony następuje nadpisanie wcześniej pobranej zawartości.
+Następnie do obiektu 'Task' w bazie danych dodawane jest pole 'location' zawierające ścieżkę
+do pliku bądź katalogi na dysku, a pole 'status' jest ustawiane na wartość 'ready'.
+
+Używając endpointu /status/text/http://someurl.org/ lub /status/images/http://someurl.org/
+metodą GET można sprawdzić status danego zadania - 'processing' lub 'ready'.
+
+Do pobrania ściągniętej zawartości używamy endpointów /get/text/http://someurl.org/
+oraz /status/images/http://someurl.org/ (metoda GET).
+W przypadku tekstu jako odpowiedź otrzymujemy JSON z zawartością pliku.
+W przypadku obrazów jako odpowiedź otrzymujemy JSON z listą lokalizacji pobranych obrazów na dysku.
+
+W przypadku błędnych zapytań otrzymujemy JSONa z polem 'error' zawierającym informację o błędzie,
+jednak dla uproszczenia ograniczono się do podstawowych komunikatów.
+
+Testy sporządzono dla API. Dla poszczególnych funkcji w module 'downloader' testów nie robiłem
+z uwagi na obfite korzystanie przez nie z funkcji wejścia/wyjścia, co powodowałoby konieczność
+wprowadzenia mnóstwa mocków i patchów - a same działanie funkcji jest dosyć trywialne.
+
+Miałem problem przy testowaniu, używając SQLite jako bazy testowej. Importując obiekt 'app'
+(pośrednio lub bezpośrednio), wykonywała się funkcja 'db.create_all()'.
+Ostatecznie pozostawiłem tę funkcję w module app.py, opakowując ją w konstrukcję
+'try - except', logującą komunikat o błędzie z informacją o konieczności zignorowania komunikatu
+podczas testowania.
+
+Jak można by to ulepszyć/rozwinąć?
+Na przykład zaimplementować zapis plików na oddzielnym, dedykowanym do tego serwerze,
+dodać wersjonowanie pobranych zadań, porównywanie zawartości wcześniej pobranych stron
+(w przypadku zmiany zawartości strony), tworzenie 'diff-a', historię pobrań, wyszukiwanie po datach
+pobrań itp.

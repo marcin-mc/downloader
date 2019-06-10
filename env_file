@@ -1,0 +1,5 @@
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=postgres
+POSTGRES_HOST=postgres
+APP_SECRET_KEY='a&u*oH$52*k1^4%r%i)yC7K1-o=p2$(=z3;w'
